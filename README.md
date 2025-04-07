@@ -69,6 +69,16 @@ move_tasks:
     overwrite: false
 ```
 
+## 📄 Viewing Logs
+
+file-move-trigger logs everything to `stderr`, which is captured by `systemd` and viewable using the journal.
+
+To follow logs in real time:
+
+```bash
+journalctl -u file-move-trigger.service -f
+```
+
 ## 🛠 Use Case Example
 
 You run:
