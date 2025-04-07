@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/fsnotify/fsnotify"
@@ -95,6 +96,7 @@ func main() {
 				task, ok := triggerMap[trigger]
 				if ok {
 					log.Printf("🟢 Trigger detected: %s", trigger)
+					time.Sleep(500 * time.Millisecond) // allow time to settle
 					if err := processMoveNow(task); err != nil {
 						log.Printf("Error processing task %s: %v", trigger, err)
 					}
@@ -147,8 +149,8 @@ func processMoveNow(task MoveTask) error {
 		}
 	}
 
-	if err := os.Remove(task.Trigger); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing trigger: %w", err)
+	if err := os.Rename(task.Trigger, task.Trigger+".processing"); err != nil {
+		return fmt.Errorf("renaming trigger to processing: %w", err)
 	}
 
 	entries, err := os.ReadDir(task.Source)
@@ -157,7 +159,9 @@ func processMoveNow(task MoveTask) error {
 	}
 
 	for _, entry := range entries {
-		if entry.Name() == filepath.Base(task.Trigger) {
+		// skip the trigger file and the processing file itself
+		if entry.Name() == filepath.Base(task.Trigger)+".processing" ||
+			entry.Name() == filepath.Base(task.Trigger) {
 			continue
 		}
 
@@ -212,6 +216,14 @@ func processMoveNow(task MoveTask) error {
 			log.Printf("⚠️ Post-hook failed: %v", err)
 			// Don't abort the task; just log
 		}
+	}
+
+	if err := os.Remove(task.Trigger); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing trigger: %w", err)
+	}
+
+	if err := os.Remove(task.Trigger + ".processing"); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing trigger: %w", err)
 	}
 
 	return nil
