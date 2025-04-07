@@ -19,6 +19,8 @@ sudo install -m 755 -o root -g root "${APP_NAME}.tmp" "${BIN_PATH}" || {
   exit 1
 }
 
+rm -f "${APP_NAME}.tmp" # Clean up the temporary binary after installation
+
 echo "✅ Installed binary to ${BIN_PATH}"
 
 echo "📁 Ensuring config directory exists..."
