@@ -1,6 +1,6 @@
 # file-move-trigger
 
-file-move-trigger is an automation tool for safely moving files from a staging area into their final destination. It does this based on the existence of particular files to trigger actions. It can be configured to monitor multiple directories and when a certain file is created, a task is launched to perform moving files and setting correct destination ownership and permissions. The trigger file can be created to launch a task and the task removes the trigger file once it begins. Just create the trigger file to launch it again. It's designed for security, performance, and full Linux systemd integration.
+file-move-trigger is an automation daemon for safely moving files based on triggers. It does this based on the existence of particular files to trigger actions. It can be configured to monitor multiple directories and when a certain file is created, a task is launched to perform moving files and setting correct destination ownership and permissions. The trigger file can be created to launch a task and the task removes the trigger file once it begins. Just create the trigger file to launch it again. It's designed for security, performance, and full Linux systemd integration.
 
 ## ✨ Features
 
@@ -11,7 +11,8 @@ file-move-trigger is an automation tool for safely moving files from a staging a
 - Safe across partitions (handles cross-device moves)
 - Recursively sets permissions on directories
 - Supports dry-run and stats modes
-- Integrates cleanly with systemd timer for automation
+- Integrates cleanly with systemd for automation
+- Uses inotify on Linux to efficiently monitor file system events
 
 ## 📦 Installation
 
@@ -19,24 +20,28 @@ file-move-trigger is an automation tool for safely moving files from a staging a
 install_or_upgrade.sh
 ```
 
-The install/upgrade script installs the binary to /usr/local/sbin/file-move-trigger, upgrades it if necessary, installs the systemd timer and enables it and installs a default configuration file to /etc/file-move-trigger/config.yaml if one does not already exist.
+The install/upgrade script installs the binary to /usr/local/sbin/file-move-trigger, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/file-move-trigger/config.yaml if one does not already exist.
 
 ## 🧾 Configuration Example (`/etc/file-move-trigger/config.yaml`)
 
 The configuration file is a YAML file consisting of a list of `move_tasks`. Each task defines:
 
-| Field       | Description                                                                 |
-|-------------|-----------------------------------------------------------------------------|
-| `trigger`   | Path to a file that triggers the move (typically named `move.now`)          |
-| `source`    | Directory to move files *from*                                              |
-| `target`    | Directory to move files *to*                                                |
-| `user`      | Optional. Set the owner of the moved files/folders                          |
-| `group`     | Optional. Set the group for the moved files/folders                         |
-| `file_mode` | Optional. File permission mode (e.g., `"0640"`)                             |
-| `dir_mode`  | Optional. Directory permission mode (e.g., `"0750"`)                        |
-| `overwrite` | Optional. If true, replaces files/folders that already exist in `target`    |
+| Field       | Type       | Required | Description                                                                 |
+|-------------|------------|----------|-----------------------------------------------------------------------------|
+| `trigger`   | string     | ✅       | Path to a file that triggers the move (typically named `move.now`)         |
+| `source`    | string     | ✅       | Directory to move files *from*                                              |
+| `target`    | string     | ✅       | Directory to move files *to*                                                |
+| `user`      | string     | optional | Set the owner of the moved files/folders                                   |
+| `group`     | string     | optional | Set the group for the moved files/folders                                  |
+| `file_mode` | string     | optional | File permission mode (e.g., `"0640"`)                                      |
+| `dir_mode`  | string     | optional | Directory permission mode (e.g., `"0750"`)                                 |
+| `overwrite` | boolean    | optional | If `true`, replaces files/folders that already exist in the `target` dir   |
+| `pre`       | string[]   | optional | One or more shell commands to run **before** moving begins                 |
+| `post`      | string[]   | optional | One or more shell commands to run **after** move is complete               |
 
-### Example:
+pre hooks must succeed (exit code 0), or the move task is aborted. post hooks are executed even if file moves fail, and their errors are only logged.
+
+### ✅ Example:
 
 ```yaml
 move_tasks:
@@ -48,6 +53,11 @@ move_tasks:
     file_mode: "0640"
     dir_mode: "0750"
     overwrite: true
+    pre:
+      - "/usr/local/bin/pre-movie-hook.sh"
+    post:
+      - "/usr/local/bin/post-movie-hook.sh"
+      - "logger 'Finished moving movies'"
 
   - trigger: /storage2/Temp/Ready/TV/move.now
     source: /storage2/Temp/Ready/TV/

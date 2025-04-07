@@ -49,5 +49,7 @@ sudo systemctl daemon-reload
 
 echo "✅ Enabling and starting ${APP_NAME}.service..."
 sudo systemctl enable --now "${APP_NAME}.service"
+sudo systemctl stop "${APP_NAME}.service"
+sudo systemctl start "${APP_NAME}.service"
 
 echo "🎉 Install/upgrade complete!"

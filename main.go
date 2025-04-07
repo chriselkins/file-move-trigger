@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
@@ -22,14 +23,16 @@ import (
 const appName = "file-move-trigger"
 
 type MoveTask struct {
-	Trigger   string `yaml:"trigger"`
-	Source    string `yaml:"source"`
-	Target    string `yaml:"target"`
-	User      string `yaml:"user"`
-	Group     string `yaml:"group"`
-	FileMode  string `yaml:"file_mode"` // e.g. "0640"
-	DirMode   string `yaml:"dir_mode"`  // e.g. "0750"
-	Overwrite bool   `yaml:"overwrite"`
+	Trigger   string   `yaml:"trigger"`
+	Source    string   `yaml:"source"`
+	Target    string   `yaml:"target"`
+	User      string   `yaml:"user"`
+	Group     string   `yaml:"group"`
+	FileMode  string   `yaml:"file_mode"` // e.g. "0640"
+	DirMode   string   `yaml:"dir_mode"`  // e.g. "0750"
+	Overwrite bool     `yaml:"overwrite"`
+	Pre       []string `yaml:"pre"`
+	Post      []string `yaml:"post"`
 }
 
 type Config struct {
@@ -137,6 +140,13 @@ func loadConfig(path string) (*Config, error) {
 }
 
 func processMoveNow(task MoveTask) error {
+	if len(task.Pre) > 0 {
+		if err := runHooks("pre", task.Pre); err != nil {
+			log.Printf("⛔ Pre-hook failed: %v", err)
+			return err
+		}
+	}
+
 	if err := os.Remove(task.Trigger); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("removing trigger: %w", err)
 	}
@@ -194,6 +204,13 @@ func processMoveNow(task MoveTask) error {
 			_ = applyRecursivePermissions(destPath, task)
 		} else {
 			_ = applyOwnershipAndPermissions(destPath, false, task)
+		}
+	}
+
+	if len(task.Post) > 0 {
+		if err := runHooks("post", task.Post); err != nil {
+			log.Printf("⚠️ Post-hook failed: %v", err)
+			// Don't abort the task; just log
 		}
 	}
 
@@ -275,4 +292,20 @@ func applyRecursivePermissions(root string, task MoveTask) error {
 		}
 		return applyOwnershipAndPermissions(path, info.IsDir(), task)
 	})
+}
+
+func runHooks(name string, cmds []string) error {
+	for _, cmdLine := range cmds {
+		log.Printf("▶️  Running %s hook: %s", name, cmdLine)
+
+		cmd := exec.Command("/bin/sh", "-c", cmdLine)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("%s hook failed: %w", name, err)
+		}
+	}
+
+	return nil
 }
