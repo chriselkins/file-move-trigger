@@ -1,0 +1,18 @@
+move_tasks:
+  - trigger: /storage2/Temp/Ready/Movies/move.now
+    source: /storage2/Temp/Ready/Movies/
+    target: /storage1/Movies/
+    user: plex
+    group: plexreaders
+    file_mode: "0640"
+    dir_mode: "0750"
+    overwrite: false
+
+  - trigger: /storage2/Temp/Ready/TV/move.now
+    source: /storage2/Temp/Ready/TV/
+    target: /storage1/TV/
+    user: plex
+    group: plexreaders
+    file_mode: "0640"
+    dir_mode: "0750"
+    overwrite: false

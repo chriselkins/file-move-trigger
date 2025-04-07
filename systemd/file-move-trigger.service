@@ -1,0 +1,6 @@
+[Unit]
+Description=Move files when triggered to do so
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/file-move-trigger --config=/etc/file-move-trigger/config.yaml
