@@ -1,6 +1,6 @@
-# file-move-trigger
+# Media Automation & Transfer Tool Daemon (MATT Daemon)
 
-file-move-trigger is an automation daemon for safely moving files based on triggers. It does this based on the existence of particular files to trigger actions. It can be configured to monitor multiple directories and when a certain file is created, a task is launched to perform moving files and setting correct destination ownership and permissions. The trigger file can be created to launch a task and the task removes the trigger file once it begins. Just create the trigger file to launch it again. It's designed for security, performance, and full Linux systemd integration.
+MATT daemon is an automation daemon for safely moving files based on triggers. It does this based on the existence of particular files to trigger actions. It can be configured to monitor multiple directories and when a certain file is created, a task is launched to perform moving files and setting correct destination ownership and permissions. The trigger file can be created to launch a task and the task removes the trigger file once it begins. Just create the trigger file to launch it again. It's designed for security, performance, and full Linux systemd integration.
 
 ## ✨ Features
 
