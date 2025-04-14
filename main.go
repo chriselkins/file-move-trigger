@@ -21,7 +21,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const appName = "MATT-Daemon"
+const appName = "matt-daemon"
 
 type MoveTask struct {
 	Trigger   string   `yaml:"trigger"`
@@ -36,8 +36,14 @@ type MoveTask struct {
 	Post      []string `yaml:"post"`
 }
 
+type Task struct {
+	Trigger string   `yaml:"trigger"`
+	Run     []string `yaml:"run"`
+}
+
 type Config struct {
 	MoveTasks []MoveTask `yaml:"move_tasks"`
+	Tasks     []Task     `yaml:"generic_tasks"`
 }
 
 var (

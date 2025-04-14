@@ -1,0 +1,12 @@
+[Unit]
+Description=Modular Automation Trigger Tool Daemon (MATT Daemon)
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/sbin/matt-daemon --config=/etc/matt-daemon/config.yaml
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target

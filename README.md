@@ -1,4 +1,4 @@
-# Media Automation & Transfer Tool Daemon (MATT Daemon)
+# Modular Automation Trigger Tool Daemon (MATT Daemon)
 
 MATT daemon is an automation daemon for safely moving files based on triggers. It does this based on the existence of particular files to trigger actions. It can be configured to monitor multiple directories and when a certain file is created, a task is launched to perform moving files and setting correct destination ownership and permissions. The trigger file can be created to launch a task and the task removes the trigger file once it begins. Just create the trigger file to launch it again. It's designed for security, performance, and full Linux systemd integration.
 
@@ -20,15 +20,17 @@ MATT daemon is an automation daemon for safely moving files based on triggers. I
 install_or_upgrade.sh
 ```
 
-The install/upgrade script installs the binary to /usr/local/sbin/file-move-trigger, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/file-move-trigger/config.yaml if one does not already exist.
+The install/upgrade script installs the binary to /usr/local/sbin/matt-daemon, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/matt-daemon/config.yaml if one does not already exist.
 
-## 🧾 Configuration Example (`/etc/file-move-trigger/config.yaml`)
+## 🧾 Configuration Example (`/etc/matt-daemon/config.yaml`)
 
-The configuration file is a YAML file consisting of a list of `move_tasks`. Each task defines:
+The configuration file is a YAML file consisting of a list of different kinds of tasks including `move_tasks` and `generic_tasks`.
 
-| Field       | Type       | Required | Description                                                                 |
-|-------------|------------|----------|-----------------------------------------------------------------------------|
-| `trigger`   | string     | ✅       | Path to a file that triggers the move (typically named `move.now`)         |
+Each move task defines:
+
+| Field       | Type       | Required | Description                                                                |
+|-------------|------------|----------|----------------------------------------------------------------------------|
+| `trigger`   | string     | ✅       | Path to a file that triggers the move task                                  |
 | `source`    | string     | ✅       | Directory to move files *from*                                              |
 | `target`    | string     | ✅       | Directory to move files *to*                                                |
 | `user`      | string     | optional | Set the owner of the moved files/folders                                   |
@@ -40,6 +42,13 @@ The configuration file is a YAML file consisting of a list of `move_tasks`. Each
 | `post`      | string[]   | optional | One or more shell commands to run **after** move is complete               |
 
 pre hooks must succeed (exit code 0), or the move task is aborted. post hooks are executed even if file moves fail, and their errors are only logged.
+
+Each generic task defines:
+
+| Field       | Type       | Required | Description                                                                |
+|-------------|------------|----------|----------------------------------------------------------------------------|
+| `trigger`   | string     | ✅       | Path to a file that triggers the task                                       |
+| `run`       | string[]   | ✅       | One or more shell commands to run                                           |
 
 ### ✅ Example:
 
@@ -67,16 +76,27 @@ move_tasks:
     file_mode: "0640"
     dir_mode: "0750"
     overwrite: false
+
+generic_tasks:
+  - trigger: /home/chris/some-file.txt
+    run:
+      - "/usr/local/bin/some-script.sh"
+      - "/usr/local/bin/some-other-script.sh"
+
+  - trigger: /var/www/html/stats.csv
+    run:
+      - "/usr/local/bin/generate-report.sh"
+
 ```
 
 ## 📄 Viewing Logs
 
-file-move-trigger logs everything to `stderr`, which is captured by `systemd` and viewable using the journal.
+matt-daemon logs everything to `stderr`, which is captured by `systemd` and viewable using the journal.
 
 To follow logs in real time:
 
 ```bash
-journalctl -u file-move-trigger.service -f
+journalctl -u matt-daemon.service -f
 ```
 
 ## 🛠 Use Case Example
@@ -86,7 +106,7 @@ You run:
 - **Samba** to manage and copy files to a staging folder as a different user (e.g., `chris`)
 - **Plex** with its own user (e.g., `plex`)
 
-file-move-trigger monitors the source folders and waits for files named `move.now` to exist. Once the user chris creates the `move.now` file in movie or tv staging folders, the task for that folder is triggered to move all the media files in the source folder to the destination Plex library with the correct permissions.
+matt-daemon monitors the source folders and waits for files named `move.now` to exist. Once the user chris creates the `move.now` file in movie or tv staging folders, the task for that folder is triggered to move all the media files in the source folder to the destination Plex library with the correct permissions.
 
 ---
 

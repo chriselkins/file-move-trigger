@@ -6,7 +6,12 @@ move_tasks:
     group: plexreaders
     file_mode: "0640"
     dir_mode: "0750"
-    overwrite: false
+    overwrite: true
+    pre:
+      - "/usr/local/bin/pre-movie-hook.sh"
+    post:
+      - "/usr/local/bin/post-movie-hook.sh"
+      - "logger 'Finished moving movies'"
 
   - trigger: /storage2/Temp/Ready/TV/move.now
     source: /storage2/Temp/Ready/TV/
@@ -16,3 +21,13 @@ move_tasks:
     file_mode: "0640"
     dir_mode: "0750"
     overwrite: false
+
+generic_tasks:
+  - trigger: /home/chris/some-file.txt
+    run:
+      - "/usr/local/bin/some-script.sh"
+      - "/usr/local/bin/some-other-script.sh"
+
+  - trigger: /var/www/html/stats.csv
+    run:
+      - "/usr/local/bin/generate-report.sh"

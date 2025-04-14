@@ -1,4 +1,4 @@
-module github.com/chriselkins/file-move-trigger
+module github.com/chriselkins/matt-daemon
 
 go 1.24.0
 

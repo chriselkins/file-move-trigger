@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-APP_NAME="file-move-trigger"
+APP_NAME="matt-daemon"
 BIN_PATH="/usr/local/sbin/${APP_NAME}"
 CONFIG_DIR="/etc/${APP_NAME}"
 CONFIG_FILE="${CONFIG_DIR}/config.yaml"
