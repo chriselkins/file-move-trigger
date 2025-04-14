@@ -1,26 +1,32 @@
-# Modular Automation Trigger Tool Daemon (MATT Daemon)
+# 🧰 MATT Daemon – Modular Automation Trigger Tool
 
-MATT daemon is an automation daemon for safely moving files based on triggers. It does this based on the existence of particular files to trigger actions. It can be configured to monitor multiple directories and when a certain file is created, a task is launched to perform moving files and setting correct destination ownership and permissions. The trigger file can be created to launch a task and the task removes the trigger file once it begins. Just create the trigger file to launch it again. It's designed for security, performance, and full Linux systemd integration.
+**`matt-daemon`** is a lightweight Linux daemon designed to automate tasks by monitoring for the presence of specific trigger files. Upon detecting these files, it executes predefined actions such as moving files or directories, adjusting permissions, or running custom scripts. This tool is ideal for system administrators and developers seeking a straightforward method to initiate tasks without the complexity of full-fledged automation frameworks. It's designed for security, performance, and full Linux systemd integration.
 
-## ✨ Features
+## 🔍 Key Features
 
-- Tasks triggered by presence of files
-- Moves individual files or whole directories
-- Configurable user/group ownership and file permissions
-- Optional overwrite behavior
-- Safe across partitions (handles cross-device moves)
-- Recursively sets permissions on directories
-- Supports dry-run and stats modes
-- Integrates cleanly with systemd for automation
-- Uses inotify on Linux to efficiently monitor file system events
+- **File-Based Triggers**: Monitor designated directories for the creation of specific files to initiate tasks.
+- **Flexible Task Execution**: Configure tasks to move files/directories, set ownership and permissions, or execute arbitrary scripts.
+- **Safe and Idempotent**: Automatically removes trigger files upon task initiation to prevent duplicate executions.
+- **Systemd Integration**: Seamlessly integrates with systemd for easy management, startup, and logging.
+- **Configurable Behavior**: Customize task parameters, including overwrite policies and permission settings, through a YAML configuration file.
+- **Dry run and Stats**: Supports dry-run and stats modes.
+- **Efficient**: Uses inotify on Linux to efficiently monitor file system events.
+
+## 🚀 Use Cases
+
+- Automating deployment processes by dropping a trigger file to initiate scripts.
+- Organizing files by moving them to designated directories with specific permissions.
+- Running maintenance tasks or backups triggered by simple file creation.
 
 ## 📦 Installation
+
+Just clone this repo and run the install/upgrade script.
 
 ```bash
 install_or_upgrade.sh
 ```
 
-The install/upgrade script installs the binary to /usr/local/sbin/matt-daemon, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/matt-daemon/config.yaml if one does not already exist.
+The install/upgrade script installs the binary to /usr/local/sbin/matt-daemon, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/matt-daemon/config.yaml if one does not already exist. It won't overwrite your existing configuration file.
 
 ## 🧾 Configuration Example (`/etc/matt-daemon/config.yaml`)
 
