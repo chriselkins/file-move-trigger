@@ -1,6 +1,12 @@
-# 🧰 MATT Daemon – Modular Automation Trigger Tool
+# 🧙‍♂️ MATT Daemon – Modular Automation Trigger Tool
 
-**`matt-daemon`** is a lightweight Linux daemon designed to automate tasks by monitoring for the presence of specific trigger files. Upon detecting these files, it executes predefined actions such as moving files or directories, adjusting permissions, or running custom scripts. This tool is ideal for system administrators and developers seeking a straightforward method to initiate tasks without the complexity of full-fledged automation frameworks. It's designed for security, performance, and full Linux systemd integration.
+> “He’s not just a daemon… he’s the MATT-daemon.”
+
+`matt-daemon` is a no-nonsense, file-based task automation daemon for Linux. Think of it as your personal task butler: silently watching your directories and springing into action when a trigger file appears.
+
+Whether you're moving freshly downloaded media, kicking off backups, or launching scripts like a DevOps ninja, `matt-daemon` is here for it. Built for security, speed, and full systemd integration — because crons are boring and inotify is beautiful.
+ 
+> "One small file for man, one giant task for matt-daemon."
 
 ## 🔍 Key Features
 
@@ -12,11 +18,15 @@
 - **Dry run and Stats**: Supports dry-run and stats modes.
 - **Efficient**: Uses inotify on Linux to efficiently monitor file system events.
 
+> "Drop a file. Trigger a task. Deploy with style."
+
 ## 🚀 Use Cases
 
 - Automating deployment processes by dropping a trigger file to initiate scripts.
 - Organizing files by moving them to designated directories with specific permissions.
 - Running maintenance tasks or backups triggered by simple file creation.
+
+> "Your friendly file-watching daemon — mission-ready."
 
 ## 📦 Installation
 
@@ -27,6 +37,8 @@ install_or_upgrade.sh
 ```
 
 The install/upgrade script installs the binary to /usr/local/sbin/matt-daemon, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/matt-daemon/config.yaml if one does not already exist. It won't overwrite your existing configuration file.
+
+> "He watches. He waits. He runs your scripts."
 
 ## 🎯 Task Types
 
@@ -91,9 +103,9 @@ move_tasks:
     overwrite: false
 
 generic_tasks:
-  - trigger: /home/chris/some-file.txt
+  - trigger: /triggers/run_backup.now
     run:
-      - "/usr/local/bin/some-script.sh"
+      - "/usr/local/bin/full-backup.sh"
       - "/usr/local/bin/some-other-script.sh"
 
   - trigger: /var/www/html/stats.csv

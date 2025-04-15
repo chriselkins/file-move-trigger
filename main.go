@@ -48,6 +48,7 @@ type Config struct {
 
 var (
 	configPath = flag.String("config", fmt.Sprintf("/etc/%s/config.yaml", appName), "Path to YAML config file")
+	status     = flag.Bool("status", false, "")
 )
 
 func main() {
@@ -92,7 +93,16 @@ func main() {
 
 	// Notify systemd we're ready
 	daemon.SdNotify(false, daemon.SdNotifyReady)
-	log.Println("✅ Ready and waiting for trigger files...")
+
+	readyMsg := func() string {
+		if *status {
+			return "[MATT]: Standing by. Ready to go Bourne."
+		}
+
+		return "✅ Ready and waiting for trigger files..."
+	}
+
+	log.Println(readyMsg)
 
 	for {
 		select {
