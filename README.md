@@ -30,6 +30,8 @@ The install/upgrade script installs the binary to /usr/local/sbin/matt-daemon, u
 
 ## 🎯 Task Types
 
+You can configure different types of tasks.
+
 - **Move Tasks** are focused on moving files and directories with options for permissions and ownership.
 - **Generic Tasks** provide greater flexibility and can run any executable task, making them suitable for more complex workflows.
 
