@@ -131,7 +131,7 @@ You run:
 - **Samba** to manage and copy files to a staging folder as a different user (e.g., `chris`)
 - **Plex** with its own user (e.g., `plex`)
 
-matt-daemon monitors the source folders and waits for files named `move.now` to exist. Once the user chris creates the `move.now` file in movie or tv staging folders, the task for that folder is triggered to move all the media files in the source folder to the destination Plex library with the correct permissions.
+`matt-daemon` keeps a close watch on your source folders, patiently waiting for a file named move.now to appear. When the user `chris` drops a `move.now` file into a movie or TV staging folder, the daemon springs into action — automatically moving all media files from the staging area into the proper Plex library folder, applying the correct permissions along the way.
 
 ---
 
