@@ -28,11 +28,16 @@ install_or_upgrade.sh
 
 The install/upgrade script installs the binary to /usr/local/sbin/matt-daemon, upgrades it if necessary, installs the systemd service, enables the service, and installs a default configuration file to /etc/matt-daemon/config.yaml if one does not already exist. It won't overwrite your existing configuration file.
 
+## 🎯 Task Types
+
+- **Move Tasks** are focused on moving files and directories with options for permissions and ownership.
+- **Generic Tasks** provide greater flexibility and can run any executable task, making them suitable for more complex workflows.
+
 ## 🧾 Configuration Example (`/etc/matt-daemon/config.yaml`)
 
 The configuration file is a YAML file consisting of a list of different kinds of tasks including `move_tasks` and `generic_tasks`.
 
-Each move task defines:
+Each **move task** defines:
 
 | Field       | Type       | Required | Description                                                                |
 |-------------|------------|----------|----------------------------------------------------------------------------|
@@ -49,7 +54,7 @@ Each move task defines:
 
 pre hooks must succeed (exit code 0), or the move task is aborted. post hooks are executed even if file moves fail, and their errors are only logged.
 
-Each generic task defines:
+Each **generic task** defines:
 
 | Field       | Type       | Required | Description                                                                |
 |-------------|------------|----------|----------------------------------------------------------------------------|
