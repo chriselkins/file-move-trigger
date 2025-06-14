@@ -23,22 +23,33 @@ import (
 
 const appName = "matt-daemon"
 
+type Runner interface {
+	Run(ctx context.Context) error
+}
+
+type Command struct {
+	Command string `yaml:"command"`
+	UID     int    `yaml:"uid"`
+	GID     int    `yaml:"gid"`
+	Timeout int    `yaml:"timeout"` // in seconds
+}
+
 type MoveTask struct {
-	Trigger   string   `yaml:"trigger"`
-	Source    string   `yaml:"source"`
-	Target    string   `yaml:"target"`
-	User      string   `yaml:"user"`
-	Group     string   `yaml:"group"`
-	FileMode  string   `yaml:"file_mode"` // e.g. "0640"
-	DirMode   string   `yaml:"dir_mode"`  // e.g. "0750"
-	Overwrite bool     `yaml:"overwrite"`
-	Pre       []string `yaml:"pre"`
-	Post      []string `yaml:"post"`
+	Trigger   string    `yaml:"trigger"`
+	Source    string    `yaml:"source"`
+	Target    string    `yaml:"target"`
+	User      string    `yaml:"user"`
+	Group     string    `yaml:"group"`
+	FileMode  string    `yaml:"file_mode"` // e.g. "0640"
+	DirMode   string    `yaml:"dir_mode"`  // e.g. "0750"
+	Overwrite bool      `yaml:"overwrite"`
+	Pre       []Command `yaml:"pre"`
+	Post      []Command `yaml:"post"`
 }
 
 type Task struct {
-	Trigger string   `yaml:"trigger"`
-	Run     []string `yaml:"run"`
+	Trigger  string    `yaml:"trigger"`
+	Commands []Command `yaml:"run"`
 }
 
 type Config struct {
@@ -68,11 +79,19 @@ func main() {
 
 	go handleSignals(cancel)
 
-	triggerMap := make(map[string]MoveTask)
+	// map to hold trigger paths and their corresponding tasks
+	triggerTasks := make(map[string]Runner)
+
+	// directories we will enable file system notifications on
 	watchDirs := make(map[string]struct{})
 
 	for _, task := range cfg.MoveTasks {
-		triggerMap[task.Trigger] = task
+		triggerTasks[task.Trigger] = task
+		watchDirs[filepath.Dir(task.Trigger)] = struct{}{}
+	}
+
+	for _, task := range cfg.Tasks {
+		triggerTasks[task.Trigger] = task
 		watchDirs[filepath.Dir(task.Trigger)] = struct{}{}
 	}
 
@@ -100,7 +119,7 @@ func main() {
 		}
 
 		return "✅ Ready and waiting for trigger files..."
-	}
+	}()
 
 	log.Println(readyMsg)
 
@@ -109,13 +128,16 @@ func main() {
 		case event := <-watcher.Events:
 			if event.Op&fsnotify.Create == fsnotify.Create {
 				trigger := event.Name
-				task, ok := triggerMap[trigger]
+				task, ok := triggerTasks[trigger]
+
 				if ok {
 					log.Printf("🟢 Trigger detected: %s", trigger)
 					time.Sleep(500 * time.Millisecond) // allow time to settle
-					if err := processMoveNow(task); err != nil {
-						log.Printf("Error processing task %s: %v", trigger, err)
-					}
+					go func() {
+						if err := task.Run(ctx); err != nil {
+							log.Printf("Error processing task for trigger %s: %v", trigger, err)
+						}
+					}()
 				}
 			}
 		case err := <-watcher.Errors:
@@ -150,16 +172,87 @@ func loadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
+
 	return &cfg, nil
 }
 
-func processMoveNow(task MoveTask) error {
+func (task Task) Run(ctx context.Context) error {
+	if err := os.Rename(task.Trigger, task.Trigger+".processing"); err != nil {
+		return fmt.Errorf("renaming trigger to processing: %w", err)
+	}
+
+	for _, app := range task.Commands {
+		log.Printf("▶️  Running: %s", app.Command)
+
+		// set a timeout for the command
+		nctx, cancel := func() (context.Context, context.CancelFunc) {
+			if app.Timeout > 0 {
+				return context.WithTimeout(ctx, time.Duration(app.Timeout)*time.Second)
+			}
+
+			return context.WithCancel(ctx)
+		}()
+
+		defer cancel()
+
+		cmd := exec.CommandContext(nctx, app.Command)
+
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+			Credential: &syscall.Credential{
+				Uid: uint32(app.UID),
+				Gid: uint32(app.GID),
+			},
+		}
+
+		cmd.Env = []string{}
+		cmd.Stdin = nil
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		// Start the command
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+
+		finished := false
+
+		// If context is canceled, kill the entire process group
+		go func() {
+			<-nctx.Done()
+
+			if !finished {
+				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // Kill the group
+			}
+		}()
+
+		// Wait for it to finish
+		if err := cmd.Wait(); err != nil {
+			return err
+		}
+
+		finished = true
+	}
+
+	if err := os.Remove(task.Trigger); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing trigger: %w", err)
+	}
+
+	if err := os.Remove(task.Trigger + ".processing"); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing trigger: %w", err)
+	}
+
+	return nil
+}
+
+func (task MoveTask) Run(ctx context.Context) error {
 	if len(task.Pre) > 0 {
-		if err := runHooks("pre", task.Pre); err != nil {
+		if err := runHooks(ctx, "pre", task.Pre); err != nil {
 			log.Printf("⛔ Pre-hook failed: %v", err)
 			return err
 		}
@@ -189,6 +282,7 @@ func processMoveNow(task MoveTask) error {
 				log.Printf("Skipping %s: destination exists", destPath)
 				continue
 			}
+
 			if stat.IsDir() {
 				if err := os.RemoveAll(destPath); err != nil {
 					log.Printf("Failed to remove existing dir: %v", err)
@@ -228,7 +322,7 @@ func processMoveNow(task MoveTask) error {
 	}
 
 	if len(task.Post) > 0 {
-		if err := runHooks("post", task.Post); err != nil {
+		if err := runHooks(ctx, "post", task.Post); err != nil {
 			log.Printf("⚠️ Post-hook failed: %v", err)
 			// Don't abort the task; just log
 		}
@@ -282,6 +376,7 @@ func copyDir(src, dst string) error {
 
 func applyOwnershipAndPermissions(path string, isDir bool, task MoveTask) error {
 	var modeStr string
+
 	if isDir {
 		modeStr = task.DirMode
 	} else {
@@ -301,11 +396,13 @@ func applyOwnershipAndPermissions(path string, isDir bool, task MoveTask) error 
 			uid, _ = strconv.Atoi(u.Uid)
 		}
 	}
+
 	if task.Group != "" {
 		if g, err := user.LookupGroup(task.Group); err == nil {
 			gid, _ = strconv.Atoi(g.Gid)
 		}
 	}
+
 	if uid != -1 || gid != -1 {
 		_ = os.Chown(path, uid, gid)
 	}
@@ -322,17 +419,58 @@ func applyRecursivePermissions(root string, task MoveTask) error {
 	})
 }
 
-func runHooks(name string, cmds []string) error {
-	for _, cmdLine := range cmds {
-		log.Printf("▶️  Running %s hook: %s", name, cmdLine)
+func runHooks(ctx context.Context, name string, cmds []Command) error {
+	for _, app := range cmds {
+		log.Printf("▶️  Running %s hook: %s", name, app.Command)
 
-		cmd := exec.Command("/bin/sh", "-c", cmdLine)
+		// set a timeout for the command
+		nctx, cancel := func() (context.Context, context.CancelFunc) {
+			if app.Timeout > 0 {
+				return context.WithTimeout(ctx, time.Duration(app.Timeout)*time.Second)
+			}
+
+			return context.WithCancel(ctx)
+		}()
+
+		defer cancel()
+
+		cmd := exec.CommandContext(nctx, app.Command)
+
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+			Credential: &syscall.Credential{
+				Uid: uint32(app.UID),
+				Gid: uint32(app.GID),
+			},
+		}
+
+		cmd.Env = []string{}
+		cmd.Stdin = nil
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("%s hook failed: %w", name, err)
+		// Start the command
+		if err := cmd.Start(); err != nil {
+			return err
 		}
+
+		finished := false
+
+		// If context is canceled, kill the entire process group
+		go func() {
+			<-nctx.Done()
+
+			if !finished {
+				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // Kill the group
+			}
+		}()
+
+		// Wait for it to finish
+		if err := cmd.Wait(); err != nil {
+			return err
+		}
+
+		finished = true
 	}
 
 	return nil
