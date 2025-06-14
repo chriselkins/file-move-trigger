@@ -88,10 +88,15 @@ move_tasks:
     dir_mode: "0750"
     overwrite: true
     pre:
-      - "/usr/local/bin/pre-movie-hook.sh"
+      - command: "/usr/local/bin/pre-movie-hook.sh"
+        uid: 1001
+        gid: 1001
+        timeout: 600
     post:
-      - "/usr/local/bin/post-movie-hook.sh"
-      - "logger 'Finished moving movies'"
+      - command: "/usr/local/bin/post-movie-hook.sh"
+        uid: 1001
+        gid: 1001
+      - command: "logger 'Finished moving movies'"
 
   - trigger: /storage2/Temp/Ready/TV/move.now
     source: /storage2/Temp/Ready/TV/
@@ -103,15 +108,17 @@ move_tasks:
     overwrite: false
 
 generic_tasks:
-  - trigger: /triggers/run_backup.now
+  - trigger: /home/chris/some-file.txt
     run:
-      - "/usr/local/bin/full-backup.sh"
-      - "/usr/local/bin/some-other-script.sh"
+      - command: "/usr/local/bin/some-script.sh"
+        uid: 1000
+        gid: 1000
+        timeout: 600
+      - command: "/usr/local/bin/some-other-script.sh"
 
   - trigger: /var/www/html/stats.csv
     run:
-      - "/usr/local/bin/generate-report.sh"
-
+      - command: "/usr/local/bin/generate-report.sh"
 ```
 
 ## 📄 Viewing Logs
